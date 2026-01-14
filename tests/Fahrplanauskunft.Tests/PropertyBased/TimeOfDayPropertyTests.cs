@@ -12,7 +12,8 @@ public class TimeOfDayPropertyTests
 {
     // Cache generators as static readonly to avoid recreation overhead
     private static readonly Arbitrary<(int hours, int minutes)> ValidHoursAndMinutes = CreateValidHoursAndMinutesArb();
-    private static readonly Arbitrary<int> ValidMinutesSinceMidnight = CreateValidMinutesSinceMidnightArb();
+    private static readonly Arbitrary<(int hours, int minutes)> ExtendedHoursAndMinutes = CreateExtendedHoursAndMinutesArb();
+    private static readonly Arbitrary<int> ValidTotalMinutes = CreateValidTotalMinutesArb();
     private static readonly Arbitrary<((int h1, int m1), (int h2, int m2))> TwoDistinctTimes = CreateTwoDistinctTimesArb();
 
     [Property]
@@ -32,7 +33,7 @@ public class TimeOfDayPropertyTests
     }
 
     [Property]
-    public Property TimeOfDay_MinutesSinceMidnight_IsConsistentWithHoursAndMinutes()
+    public Property TimeOfDay_TotalMinutes_IsConsistentWithHoursAndMinutes()
     {
         return Prop.ForAll(
             ValidHoursAndMinutes,
@@ -41,8 +42,8 @@ public class TimeOfDayPropertyTests
                 var (hours, minutes) = tuple;
                 var timeOfDay = new TimeOfDay(hours, minutes);
 
-                // Property: MinutesSinceMidnight == Hours * 60 + Minutes
-                return timeOfDay.MinutesSinceMidnight == hours * 60 + minutes;
+                // Property: TotalMinutes == Hours * 60 + Minutes
+                return timeOfDay.TotalMinutes == hours * 60 + minutes;
             });
     }
 
@@ -56,8 +57,8 @@ public class TimeOfDayPropertyTests
                 var (hours, minutes) = tuple;
                 var timeOfDay = new TimeOfDay(hours, minutes);
 
-                // Property: Hours property is always between 0 and 23
-                return timeOfDay.Hours >= 0 && timeOfDay.Hours <= 23;
+                // Property: Hours property is always between 0 and 47 (extended hours support)
+                return timeOfDay.Hours >= 0 && timeOfDay.Hours <= 47;
             });
     }
 
@@ -147,16 +148,16 @@ public class TimeOfDayPropertyTests
     }
 
     [Property]
-    public Property TimeOfDay_FromMinutesSinceMidnight_RoundTrips()
+    public Property TimeOfDay_FromTotalMinutes_RoundTrips()
     {
         return Prop.ForAll(
-            ValidMinutesSinceMidnight,
+            ValidTotalMinutes,
             minutes =>
             {
-                var timeOfDay = TimeOfDay.FromMinutesSinceMidnight(minutes);
+                var timeOfDay = TimeOfDay.FromTotalMinutes(minutes);
 
                 // Property: Creating from minutes and reading back gives same minutes
-                return timeOfDay.MinutesSinceMidnight == minutes;
+                return timeOfDay.TotalMinutes == minutes;
             });
     }
 
@@ -176,26 +177,82 @@ public class TimeOfDayPropertyTests
             });
     }
 
+    [Property]
+    public Property TimeOfDay_ExtendedHours_IsExtendedProperty()
+    {
+        return Prop.ForAll(
+            ExtendedHoursAndMinutes,
+            tuple =>
+            {
+                var (hours, minutes) = tuple;
+                var timeOfDay = new TimeOfDay(hours, minutes);
+
+                // Property: Times with hours >= 24 are marked as extended
+                return timeOfDay.IsExtended == (hours >= 24);
+            });
+    }
+
+    [Property]
+    public Property TimeOfDay_Normalized_IsNotExtended()
+    {
+        return Prop.ForAll(
+            ExtendedHoursAndMinutes,
+            tuple =>
+            {
+                var (hours, minutes) = tuple;
+                var timeOfDay = new TimeOfDay(hours, minutes);
+                var normalized = timeOfDay.Normalized;
+
+                // Property: Normalized time is never extended
+                return !normalized.IsExtended;
+            });
+    }
+
+    [Property]
+    public Property TimeOfDay_ParseAndToString_RoundTrip()
+    {
+        return Prop.ForAll(
+            ValidHoursAndMinutes,
+            tuple =>
+            {
+                var (hours, minutes) = tuple;
+                var timeOfDay = new TimeOfDay(hours, minutes);
+                var str = timeOfDay.ToString();
+                var parsed = TimeOfDay.Parse(str);
+
+                // Property: Parse(ToString(x)) == x
+                return parsed.Equals(timeOfDay);
+            });
+    }
+
     #region Cached Generator Factories
 
     private static Arbitrary<(int hours, int minutes)> CreateValidHoursAndMinutesArb()
     {
-        var gen = from hours in Gen.Choose(0, 23)
+        var gen = from hours in Gen.Choose(0, 47)  // Extended hours support
                   from minutes in Gen.Choose(0, 59)
                   select (hours, minutes);
         return Arb.From(gen);
     }
 
-    private static Arbitrary<int> CreateValidMinutesSinceMidnightArb()
+    private static Arbitrary<(int hours, int minutes)> CreateExtendedHoursAndMinutesArb()
     {
-        return Arb.From(Gen.Choose(0, 1439)); // 0 to 23:59
+        var gen = from hours in Gen.Choose(0, 47)  // Full range including extended
+                  from minutes in Gen.Choose(0, 59)
+                  select (hours, minutes);
+        return Arb.From(gen);
+    }
+
+    private static Arbitrary<int> CreateValidTotalMinutesArb()
+    {
+        return Arb.From(Gen.Choose(0, TimeOfDay.MaxMinutes - 1)); // 0 to 47:59
     }
 
     private static Arbitrary<((int h1, int m1), (int h2, int m2))> CreateTwoDistinctTimesArb()
     {
-        var gen = from h1 in Gen.Choose(0, 23)
+        var gen = from h1 in Gen.Choose(0, 47)  // Extended hours
                   from m1 in Gen.Choose(0, 59)
-                  from h2 in Gen.Choose(0, 23)
+                  from h2 in Gen.Choose(0, 47)
                   from m2 in Gen.Choose(0, 59)
                   select ((h1, m1), (h2, m2));
         return Arb.From(gen);
