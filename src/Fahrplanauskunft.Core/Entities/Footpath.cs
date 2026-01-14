@@ -36,6 +36,17 @@ public sealed class Footpath : IEquatable<Footpath>
     public int? DistanceMeters { get; }
 
     /// <summary>
+    /// Private constructor for EF Core materialization.
+    /// Navigation properties are set via reflection after instantiation.
+    /// </summary>
+#pragma warning disable CS8618 // Non-nullable property must contain a non-null value when exiting constructor
+    private Footpath()
+    {
+        // Required for EF Core entity materialization
+    }
+#pragma warning restore CS8618
+
+    /// <summary>
     /// Creates a new Footpath between two stops.
     /// </summary>
     /// <param name="from">The origin stop (cannot be null)</param>

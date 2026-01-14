@@ -46,6 +46,17 @@ public sealed class StopTime : IEquatable<StopTime>, IComparable<StopTime>
     public bool DropOffAllowed { get; }
 
     /// <summary>
+    /// Private constructor for EF Core materialization.
+    /// Navigation properties are set via reflection after instantiation.
+    /// </summary>
+#pragma warning disable CS8618 // Non-nullable property must contain a non-null value when exiting constructor
+    private StopTime()
+    {
+        // Required for EF Core entity materialization
+    }
+#pragma warning restore CS8618
+
+    /// <summary>
     /// Creates a new StopTime.
     /// </summary>
     /// <param name="stop">The stop (cannot be null)</param>
