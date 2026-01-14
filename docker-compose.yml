@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: fahrplanauskunft-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-fahrplan}
+      POSTGRES_USER: ${POSTGRES_USER:-fahrplan}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fahrplan_dev}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-fahrplan} -d ${POSTGRES_DB:-fahrplan}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    name: fahrplanauskunft_postgres_data
