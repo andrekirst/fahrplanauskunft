@@ -165,6 +165,8 @@ public class HexagonalArchitectureTests
             .And()
             .DoNotResideInNamespace("Fahrplanauskunft.Infrastructure.Migrations")
             .And()
+            .DoNotResideInNamespace("Fahrplanauskunft.Infrastructure.Gtfs")
+            .And()
             .DoNotHaveNameEndingWith("DesignTimeDbContextFactory")
             .Should()
             .HaveDependencyOn(CoreNamespace)
