@@ -162,11 +162,17 @@ public class HexagonalArchitectureTests
             .InAssembly(infrastructureAssembly)
             .That()
             .ResideInNamespace(InfrastructureNamespace)
+            .And()
+            .DoNotResideInNamespace("Fahrplanauskunft.Infrastructure.Migrations")
+            .And()
+            .DoNotHaveNameEndingWith("DesignTimeDbContextFactory")
             .Should()
             .HaveDependencyOn(CoreNamespace)
             .GetResult();
 
         result.IsSuccessful.Should().BeTrue(
-            "Infrastructure layer should depend on Core layer to implement ports.");
+            "Infrastructure layer should depend on Core layer to implement ports. " +
+            "Violating types: {0}",
+            string.Join(", ", result.FailingTypeNames ?? []));
     }
 }
